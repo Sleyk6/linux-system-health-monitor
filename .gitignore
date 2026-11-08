@@ -1,0 +1,17 @@
+# Secrets - never upload
+.env
+*.env
+*.key
+*.pem
+id_*
+secrets/
+
+# Logs and generated reports
+*.log
+logs/
+reports/
+
+# Python leftovers
+__pycache__/
+*.pyc
+.venv/
