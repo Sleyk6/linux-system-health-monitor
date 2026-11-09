@@ -18,6 +18,22 @@ Built and tested on Debian 13 inside a Proxmox VE LXC container, as part of a ho
 
 Thresholds and test hosts are variables at the top of the script.
 
+## Logs
+
+Every run is shown on screen **and** saved:
+
+| File | Contents |
+|---|---|
+| `logs/health-YYYY-MM-DD.log` | full report of every run that day |
+| `logs/history.log` | one line per run: date, host, PASS/WARN/FAIL |
+
+Daily logs older than 14 days (`KEEP_DAYS`) are deleted automatically; `history.log` is kept. Use another folder with `LOG_DIR=/path ./health_check.sh`. The `logs/` folder is git-ignored, so results are never committed.
+
+```
+$ tail -3 logs/history.log
+2026-11-09 17:36:03 UTC  telemetry  PASS
+```
+
 ## Usage
 
 ```bash
@@ -78,6 +94,7 @@ This lets cron jobs, monitoring tools or scripts react without parsing text, for
 - Forced WARN (disk limit lowered to 1 %): OVERALL WARN, exit 1.
 - Forced FAIL (load limit set to 0): OVERALL FAIL, exit 2.
 - Run on a host with no network or systemd: network checks FAIL and services WARN, as expected.
+- Logging: two runs produce one daily file with both reports and two `history.log` lines; a log file aged 20 days is removed; `LOG_DIR` override writes to the chosen folder; exit codes unchanged.
 - `bash -n` syntax check before every commit.
 
 ## Version history
@@ -87,10 +104,10 @@ This lets cron jobs, monitoring tools or scripts react without parsing text, for
 | v1 | Report host, uptime, CPU, memory, disk |
 | v2 | PASS/WARN/FAIL grading, thresholds, exit codes |
 | v2.1 | Service, gateway, DNS and internet checks |
+| v2.2 | Daily log files, run history, automatic log clean-up |
 
 ## Roadmap
 
-- Write each run to a log file under `logs/` (already git-ignored)
 - Schedule it (cron / systemd timer) and keep a history
 - Optional JSON output for dashboards and phone shortcuts
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# health_check.sh v2.1 - Linux System Health Monitor
+# health_check.sh v2.2 - Linux System Health Monitor
 # Grades CPU load, memory, disk, services and network as PASS / WARN / FAIL.
 # Exit code: 0 = all PASS, 1 = at least one WARN, 2 = at least one FAIL.
+# Every run is saved to logs/health-YYYY-MM-DD.log and summarised in logs/history.log.
 
 set -u
 
@@ -14,6 +15,15 @@ LOAD_WARN=1.0; LOAD_FAIL=2.0    # 1-minute load per CPU core
 # --- Network test targets ---
 DNS_TEST_HOST="github.com"      # name that must resolve (DNS check)
 NET_TEST_HOST="github.com"      # host that must accept HTTPS on port 443 (internet check)
+
+# --- Logging ---
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+LOG_DIR="${LOG_DIR:-$SCRIPT_DIR/logs}"   # override with: LOG_DIR=/path ./health_check.sh
+KEEP_DAYS=14                             # delete daily logs older than this
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/health-$(date '+%Y-%m-%d').log"
+# Send everything printed below to the screen AND the daily log file.
+exec > >(tee -a "$LOG_FILE") 2>&1
 
 WORST=0   # worst result so far: 0 = PASS, 1 = WARN, 2 = FAIL
 
@@ -97,8 +107,16 @@ fi
 
 echo ""
 case $WORST in
-  0) echo "OVERALL: PASS" ;;
-  1) echo "OVERALL: WARN" ;;
-  2) echo "OVERALL: FAIL" ;;
+  0) OVERALL=PASS ;;
+  1) OVERALL=WARN ;;
+  *) OVERALL=FAIL ;;
 esac
+echo "OVERALL: $OVERALL"
+echo ""
+
+# One line per run in history.log, so trends are easy to scan: date, host, result.
+echo "$(date '+%Y-%m-%d %H:%M:%S %Z')  $(hostname)  $OVERALL" >> "$LOG_DIR/history.log"
+# Housekeeping: remove daily logs older than KEEP_DAYS (history.log is kept).
+find "$LOG_DIR" -name 'health-*.log' -type f -mtime +"$KEEP_DAYS" -delete 2>/dev/null
+
 exit "$WORST"
