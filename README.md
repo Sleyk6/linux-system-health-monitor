@@ -43,6 +43,20 @@ cd linux-system-health-monitor
 echo "exit code: $?"
 ```
 
+### JSON output
+For dashboards, scripts or phone shortcuts, `--json` prints one JSON object instead of the text report. The text report still goes to the daily log.
+
+```bash
+./health_check.sh --json
+```
+```json
+{"host":"lab-server","time":"2026-11-09T22:11:59Z","overall":"PASS","exit_code":0,
+ "checks":[{"check":"cpu","status":"PASS","message":"Load 0.00 on 1 core(s) = 0.00 per core"},
+           {"check":"memory","status":"PASS","message":"Memory 6% used (924Mi available)"},
+           {"check":"disk","status":"PASS","message":"Disk / 11% used (757M of 7.8G)"}]}
+```
+Abbreviated above (3 of 7 checks). Check names: `cpu`, `memory`, `disk`, `services`, `gateway`, `dns`, `internet`. Example with `jq`: `./health_check.sh --json | jq -r '.checks[] | select(.status != "PASS") | .message'`
+
 No packages to install: it uses only standard tools (`bash`, `awk`, `df`, `free`, `ip`, `getent`, `ping`, `systemctl`, `timeout`). No root access is needed for the checks.
 
 ## Sample output
@@ -81,6 +95,7 @@ OVERALL: PASS
 | 0 | every check PASS |
 | 1 | at least one WARN, no FAIL |
 | 2 | at least one FAIL |
+| 3 | unknown option (see `--help`) |
 
 This lets cron jobs, monitoring tools or scripts react without parsing text, for example:
 
@@ -95,6 +110,7 @@ This lets cron jobs, monitoring tools or scripts react without parsing text, for
 - Forced FAIL (load limit set to 0): OVERALL FAIL, exit 2.
 - Run on a host with no network or systemd: network checks FAIL and services WARN, as expected.
 - Logging: two runs produce one daily file with both reports and two `history.log` lines; a log file aged 20 days is removed; `LOG_DIR` override writes to the chosen folder; exit codes unchanged.
+- JSON mode: output validated with `python3 -m json.tool`; same exit code as text mode; text report still written to the log; unknown option exits 3.
 - `bash -n` syntax check before every commit.
 
 ## Version history
@@ -105,11 +121,11 @@ This lets cron jobs, monitoring tools or scripts react without parsing text, for
 | v2 | PASS/WARN/FAIL grading, thresholds, exit codes |
 | v2.1 | Service, gateway, DNS and internet checks |
 | v2.2 | Daily log files, run history, automatic log clean-up |
+| v2.3 | `--json` output mode, `--help`, exit code 3 for bad options |
 
 ## Roadmap
 
 - Schedule it (cron / systemd timer) and keep a history
-- Optional JSON output for dashboards and phone shortcuts
 
 ## License
 
